@@ -5,6 +5,7 @@ import static us.abstracta.jmeter.javadsl.dashboard.DashboardVisualizer.*;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Random;
 import samplers.*;
 
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,12 @@ public class FinalHomeWorkTest {
 
     AdminLogin adminLogin = new AdminLogin();
     UserCreation userCreation = new UserCreation();
+    UserLogin userLogin = new UserLogin();
+    TicketCreation ticketCreation = new TicketCreation();
+    Pagination pagination = new Pagination();
+    Filtration filtration = new Filtration("created", "1");
+    OpeningTask openingTask = new OpeningTask();
+    Random random = new Random();
 
 
     @Test
@@ -22,6 +29,7 @@ public class FinalHomeWorkTest {
         String hostname = "sandbox";
         String port = ":23232";
         String baseUrl = protocol + hostname + port;
+        int delaySeconds = random.nextInt(5) + 1;
 
         TestPlanStats stats = testPlan(
                 httpCookies()
@@ -40,8 +48,17 @@ public class FinalHomeWorkTest {
                         vars().set("USER_PASSWORD", "${__RandomString(10,abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789)}"),
                         transaction("TC: Лог - Авторизация админа",
                                 adminLogin.get(baseUrl),
-                                userCreation.get(baseUrl)
-                                // добавить задержку 1-5
+                                userCreation.get(baseUrl),
+                                threadPause(Duration.ofSeconds(delaySeconds))
+                        ),
+                        transaction("TC: Лог - Авторизация пользователя",
+                                userLogin.get(baseUrl),
+                                ticketCreation.get(baseUrl),
+                                pagination.get(baseUrl),
+                                percentController(10, // вероятность срабатывания 10%
+                                        filtration.get(baseUrl)
+                                )
+                                //openingTask.get(baseUrl) // Проблема с if контроллером
                         )
                 ),
                 influxDbListener("http://127.0.0.1:8086/write?db=test")
